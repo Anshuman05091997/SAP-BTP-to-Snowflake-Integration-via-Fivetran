@@ -17,58 +17,51 @@ This project demonstrates a data integration pipeline that extracts financial da
 
 ### High-Level Architecture
 
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                         SAP BTP (HANA Cloud)                        │
-│  ┌──────────────────────────────────────────────────────────────┐  │
-│  │  Finance Schema (FINANCE)                                     │  │
-│  │  - Document Headers (BKPF)                                    │  │
-│  │  - Line Items (BSEG)                                          │  │
-│  │  - G/L Master Data (SKA1)                                     │  │
-│  │  - Custom Views                                               │  │
-│  └──────────────────────────────────────────────────────────────┘  │
-│                              │                                       │
-│                     Read-Only User (FIVETRAN_HANA_USER)             │
-│                              │                                       │
-└──────────────────────────────┼───────────────────────────────────────┘
-                               │
-                               │ SSL/TLS (Port 443)
-                               │ Batch Sync (Daily/Hourly)
-                               ▼
-                  ┌────────────────────────┐
-                  │                        │
-                  │      FIVETRAN          │
-                  │   (ETL Orchestration)  │
-                  │                        │
-                  │  - SAP HANA Connector  │
-                  │  - Batch Scheduling    │
-                  │  - Schema Mapping      │
-                  │                        │
-                  └────────────────────────┘
-                               │
-                               │ Secure Connection
-                               │ Auto Schema Management
-                               ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                           SNOWFLAKE                                 │
-│  ┌──────────────────────────────────────────────────────────────┐  │
-│  │  FIVETRAN_WH_DEDICATED (Always-On Warehouse)                 │  │
-│  │  - Auto Suspend = 0 (Never suspends)                         │  │
-│  │  - Configurable Size (SMALL/MEDIUM)                          │  │
-│  └──────────────────────────────────────────────────────────────┘  │
-│                                                                     │
-│  ┌──────────────────────────────────────────────────────────────┐  │
-│  │  Database: FIVETRAN_DB                                        │  │
-│  │    └── Schema: FINANCE_RAW (Landing Zone)                    │  │
-│  │         ├── BKPF (Raw Table)                                  │  │
-│  │         ├── BSEG (Raw Table)                                  │  │
-│  │         ├── SKA1 (Raw Table)                                  │  │
-│  │         └── _FIVETRAN_* (Metadata Tables)                    │  │
-│  │                                                               │  │
-│  │    └── Schema: FINANCE_RAW_V (Clean Views - Optional)        │  │
-│  │         └── Deduplicated/Transformed Views                    │  │
-│  └──────────────────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────────────┘
+```mermaid
+graph TB
+    subgraph SAP["SAP BTP (HANA Cloud)"]
+        HANA[("SAP HANA Cloud<br/>Database")]
+        SCHEMA["Finance Schema<br/>(BKPF, BSEG, SKA1)"]
+        USER["Read-Only User<br/>FIVETRAN_HANA_USER"]
+    end
+
+    subgraph FIVETRAN["Fivetran Cloud Platform"]
+        CONNECTOR["SAP HANA<br/>Connector"]
+        SCHEDULER["Batch Scheduler<br/>(Daily/Hourly)"]
+        MAPPER["Schema Mapper"]
+        MONITOR["Sync Monitor"]
+    end
+
+    subgraph SNOWFLAKE["Snowflake Cloud Data Platform"]
+        WH["Dedicated Warehouse<br/>FIVETRAN_WH_DEDICATED<br/>(Always-On)"]
+        DB[("Database<br/>FIVETRAN_DB")]
+        RAW["Raw Schema<br/>FINANCE_RAW"]
+        CLEAN["Clean Views<br/>FINANCE_RAW_V"]
+    end
+
+    subgraph CONSUME["Data Consumers"]
+        BI["BI Tools"]
+        ANALYTICS["Analytics"]
+        REPORTS["Reports"]
+    end
+
+    HANA --> SCHEMA
+    SCHEMA --> USER
+    USER -->|"SSL/TLS<br/>Port 443"| CONNECTOR
+    CONNECTOR --> SCHEDULER
+    SCHEDULER --> MAPPER
+    MAPPER --> MONITOR
+    MONITOR -->|"Bulk Load"| WH
+    WH --> DB
+    DB --> RAW
+    RAW -.->|"Optional"| CLEAN
+    RAW --> CONSUME
+    CLEAN --> CONSUME
+
+    style SAP fill:#0066cc,stroke:#003d7a,color:#fff
+    style FIVETRAN fill:#6200ea,stroke:#4a0099,color:#fff
+    style SNOWFLAKE fill:#29b5e8,stroke:#1a8cb8,color:#fff
+    style CONSUME fill:#00c853,stroke:#009624,color:#fff
 ```
 
 ### Data Flow Sequence

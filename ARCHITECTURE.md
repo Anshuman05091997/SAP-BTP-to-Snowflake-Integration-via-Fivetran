@@ -69,108 +69,42 @@ flowchart TB
     style CONSUME fill:#00c853,stroke:#009624,color:#fff
 ```
 
-### Three-Tier Architecture (ASCII)
+### Three-Tier Architecture
 
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                         TIER 1: SOURCE LAYER                            │
-│                         (SAP BTP - HANA Cloud)                          │
-├─────────────────────────────────────────────────────────────────────────┤
-│                                                                         │
-│  ┌───────────────────────────────────────────────────────────────┐    │
-│  │  SAP HANA Cloud Database Instance                             │    │
-│  │                                                                │    │
-│  │  ┌────────────────────────────────────────────────────────┐  │    │
-│  │  │  FINANCE Schema                                         │  │    │
-│  │  │  ├── BKPF (Document Headers)          ~2M rows         │  │    │
-│  │  │  ├── BSEG (Line Items)                ~15M rows        │  │    │
-│  │  │  ├── SKA1 (G/L Master)                ~5K rows         │  │    │
-│  │  │  └── Custom Views                     Variable          │  │    │
-│  │  └────────────────────────────────────────────────────────┘  │    │
-│  │                                                                │    │
-│  │  Access Control:                                               │    │
-│  │  • User: FIVETRAN_HANA_USER                                   │    │
-│  │  • Privilege: SELECT only (read-only)                         │    │
-│  │  • Authentication: Password-based                             │    │
-│  │  • Connection: SSL/TLS encrypted                              │    │
-│  └───────────────────────────────────────────────────────────────┘    │
-│                                                                         │
-└────────────────────────────┬────────────────────────────────────────────┘
-                             │
-                             │ Secure Connection
-                             │ Protocol: JDBC over SSL (Port 443)
-                             │ Direction: Pull-based (Fivetran initiates)
-                             ▼
-┌─────────────────────────────────────────────────────────────────────────┐
-│                    TIER 2: INTEGRATION LAYER                            │
-│                        (Fivetran Platform)                              │
-├─────────────────────────────────────────────────────────────────────────┤
-│                                                                         │
-│  ┌──────────────────────┐    ┌──────────────────────┐                 │
-│  │  SAP HANA Connector  │    │  Snowflake Writer    │                 │
-│  │  ┌─────────────────┐ │    │  ┌─────────────────┐ │                 │
-│  │  │ Connection Mgr  │ │    │  │ Bulk Loader     │ │                 │
-│  │  │ Query Executor  │ │    │  │ Type Mapper     │ │                 │
-│  │  │ Schema Reader   │ │    │  │ Error Handler   │ │                 │
-│  │  └─────────────────┘ │    │  └─────────────────┘ │                 │
-│  └──────────────────────┘    └──────────────────────┘                 │
-│             │                            ▲                              │
-│             │                            │                              │
-│             ▼                            │                              │
-│  ┌────────────────────────────────────────────────────────┐           │
-│  │           Orchestration Engine                          │           │
-│  │  ┌────────────────┐  ┌────────────────┐  ┌──────────┐ │           │
-│  │  │ Batch Scheduler│  │ State Manager  │  │ Metadata │ │           │
-│  │  │ • Daily sync   │  │ • Track syncs  │  │ Store    │ │           │
-│  │  │ • Hourly option│  │ • Incremental  │  │          │ │           │
-│  │  └────────────────┘  └────────────────┘  └──────────┘ │           │
-│  └────────────────────────────────────────────────────────┘           │
-│                                                                         │
-└────────────────────────────┬────────────────────────────────────────────┘
-                             │
-                             │ Snowflake Native Protocol
-                             │ Direction: Push-based (Fivetran writes)
-                             ▼
-┌─────────────────────────────────────────────────────────────────────────┐
-│                     TIER 3: TARGET LAYER                                │
-│                  (Snowflake Data Warehouse)                             │
-├─────────────────────────────────────────────────────────────────────────┤
-│                                                                         │
-│  ┌──────────────────────────────────────────────────────────────┐     │
-│  │  Compute Layer                                                │     │
-│  │  ┌──────────────────────────────────────────────────────┐    │     │
-│  │  │  FIVETRAN_WH_DEDICATED (Virtual Warehouse)           │    │     │
-│  │  │  • Size: SMALL (1 credit/hour)                       │    │     │
-│  │  │  • Auto Suspend: 0 (Always On)                       │    │     │
-│  │  │  • Auto Resume: TRUE                                 │    │     │
-│  │  │  • Concurrency: 8 concurrent queries max             │    │     │
-│  │  └──────────────────────────────────────────────────────┘    │     │
-│  └──────────────────────────────────────────────────────────────┘     │
-│                              │                                          │
-│                              ▼                                          │
-│  ┌──────────────────────────────────────────────────────────────┐     │
-│  │  Storage Layer (FIVETRAN_DB Database)                        │     │
-│  │                                                               │     │
-│  │  ┌────────────────────────────────────────────────────────┐ │     │
-│  │  │  FINANCE_RAW (Landing Zone Schema)                     │ │     │
-│  │  │  ├── BKPF                                              │ │     │
-│  │  │  │   ├── Business Columns (from source)               │ │     │
-│  │  │  │   ├── _FIVETRAN_SYNCED (metadata)                  │ │     │
-│  │  │  │   └── _FIVETRAN_DELETED (soft delete flag)         │ │     │
-│  │  │  ├── BSEG                                              │ │     │
-│  │  │  ├── SKA1                                              │ │     │
-│  │  │  └── Additional Tables                                 │ │     │
-│  │  └────────────────────────────────────────────────────────┘ │     │
-│  │                                                               │     │
-│  │  ┌────────────────────────────────────────────────────────┐ │     │
-│  │  │  FINANCE_RAW_V (Clean Views Schema) - Optional        │ │     │
-│  │  │  ├── BKPF_CLEAN (deduplicated)                        │ │     │
-│  │  │  ├── BSEG_CLEAN (deduplicated)                        │ │     │
-│  │  │  └── Business Logic Views                              │ │     │
-│  │  └────────────────────────────────────────────────────────┘ │     │
-│  └──────────────────────────────────────────────────────────────┘     │
-│                                                                         │
-└─────────────────────────────────────────────────────────────────────────┘
+```mermaid
+graph TB
+    subgraph Tier1["TIER 1: SOURCE LAYER<br/>(SAP BTP - HANA Cloud)"]
+        H1[("SAP HANA Cloud<br/>Database Instance")]
+        F1["Finance Schema<br/>• BKPF (Document Headers) ~2M rows<br/>• BSEG (Line Items) ~15M rows<br/>• SKA1 (G/L Master) ~5K rows<br/>• Custom Views (Variable)"]
+        U1["Access Control<br/>• User: FIVETRAN_HANA_USER<br/>• Privilege: SELECT only<br/>• Authentication: Password-based<br/>• Connection: SSL/TLS encrypted"]
+    end
+    
+    subgraph Tier2["TIER 2: INTEGRATION LAYER<br/>(Fivetran Platform)"]
+        C1["SAP HANA Connector<br/>• Connection Manager<br/>• Query Executor<br/>• Schema Reader"]
+        W1["Snowflake Writer<br/>• Bulk Loader<br/>• Type Mapper<br/>• Error Handler"]
+        O1["Orchestration Engine<br/>• Batch Scheduler (Daily sync)<br/>• State Manager (Track syncs)<br/>• Metadata Store"]
+    end
+    
+    subgraph Tier3["TIER 3: TARGET LAYER<br/>(Snowflake Data Warehouse)"]
+        WH1["Compute Layer<br/>FIVETRAN_WH_DEDICATED<br/>• Size: SMALL (1 credit/hour)<br/>• Auto Suspend: 0 (Always On)<br/>• Auto Resume: TRUE<br/>• Concurrency: 8 queries max"]
+        ST1["Storage Layer<br/>FIVETRAN_DB Database"]
+        S1["FINANCE_RAW Schema<br/>• BKPF (Business Columns + Metadata)<br/>• BSEG<br/>• SKA1<br/>• Additional Tables"]
+        V1["FINANCE_RAW_V Schema<br/>• BKPF_CLEAN (deduplicated)<br/>• BSEG_CLEAN<br/>• Business Logic Views"]
+    end
+    
+    H1 --> F1
+    F1 --> U1
+    U1 -->|"SSL/TLS (Port 443)<br/>Pull-based"| C1
+    C1 --> O1
+    O1 --> W1
+    W1 -->|"Snowflake Protocol<br/>Push-based"| WH1
+    WH1 --> ST1
+    ST1 --> S1
+    S1 --> V1
+    
+    style Tier1 fill:#0066cc,stroke:#003d7a,color:#fff
+    style Tier2 fill:#6200ea,stroke:#4a0099,color:#fff
+    style Tier3 fill:#29b5e8,stroke:#1a8cb8,color:#fff
 ```
 
 ---
@@ -220,116 +154,48 @@ graph LR
     style Target fill:#e0f2f1,stroke:#00796b
 ```
 
-### Component Details (ASCII)
+### Component Details
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                    COMPONENT BREAKDOWN                          │
-└─────────────────────────────────────────────────────────────────┘
-
-┌──────────────────────────────────────────────────────────────────┐
-│ 1. SOURCE COMPONENTS (SAP BTP)                                   │
-├──────────────────────────────────────────────────────────────────┤
-│                                                                  │
-│  [A] SAP HANA Cloud Database                                     │
-│      • Type: In-memory columnar database                         │
-│      • Hosting: SAP BTP Cloud Infrastructure                     │
-│      • Version: HANA Cloud 2.x                                   │
-│      • Purpose: Operational data store for finance transactions  │
-│                                                                  │
-│  [B] Finance Schema (FINANCE)                                    │
-│      • Tables: BKPF, BSEG, SKA1                                  │
-│      • Views: Custom reporting/calculation views                 │
-│      • Purpose: Business logic and data organization             │
-│                                                                  │
-│  [C] Database User (FIVETRAN_HANA_USER)                          │
-│      • Type: Database technical user                             │
-│      • Privileges: SELECT only (read-only)                       │
-│      • Authentication: Password-based                            │
-│      • Purpose: Secure access for data extraction                │
-│                                                                  │
-└──────────────────────────────────────────────────────────────────┘
-
-┌──────────────────────────────────────────────────────────────────┐
-│ 2. INTEGRATION COMPONENTS (Fivetran)                             │
-├──────────────────────────────────────────────────────────────────┤
-│                                                                  │
-│  [D] SAP HANA Connector                                          │
-│      • Type: Pre-built Fivetran connector                        │
-│      • Protocol: JDBC over SSL                                   │
-│      • Mode: Batch pull                                          │
-│      • Features:                                                 │
-│        - Automatic schema detection                              │
-│        - Incremental sync support                                │
-│        - Type mapping (HANA → Snowflake)                         │
-│                                                                  │
-│  [E] Batch Scheduler                                             │
-│      • Frequency Options: Hourly, Daily, Weekly                  │
-│      • Current Config: Daily                                     │
-│      • Trigger: Time-based (configurable)                        │
-│      • Purpose: Orchestrate sync cycles                          │
-│                                                                  │
-│  [F] Schema Mapper                                               │
-│      • Function: Data type conversion                            │
-│      • Mapping:                                                  │
-│        HANA VARCHAR → Snowflake VARCHAR                          │
-│        HANA DECIMAL → Snowflake NUMBER                           │
-│        HANA DATE → Snowflake DATE                                │
-│        HANA TIMESTAMP → Snowflake TIMESTAMP_NTZ                  │
-│                                                                  │
-│  [G] Metadata Store                                              │
-│      • Tracks: Sync history, schema versions                     │
-│      • State Management: Last sync timestamp, row counts         │
-│      • Purpose: Incremental sync enablement                      │
-│                                                                  │
-│  [H] Monitoring & Alerting                                       │
-│      • Metrics: Sync duration, rows synced, errors               │
-│      • Alerts: Email/Slack on failures                           │
-│      • Dashboard: Web-based sync status view                     │
-│                                                                  │
-└──────────────────────────────────────────────────────────────────┘
-
-┌──────────────────────────────────────────────────────────────────┐
-│ 3. TARGET COMPONENTS (Snowflake)                                 │
-├──────────────────────────────────────────────────────────────────┤
-│                                                                  │
-│  [I] Virtual Warehouse (FIVETRAN_WH_DEDICATED)                   │
-│      • Size: SMALL (4 servers, 16GB RAM total)                   │
-│      • Cost: ~1 credit/hour = $2-4/hour (varies by region)       │
-│      • Auto Suspend: Disabled (0 = always on)                    │
-│      • Purpose: Dedicated compute for data loading               │
-│      • Characteristics:                                          │
-│        - No cold start delays                                    │
-│        - Consistent performance                                  │
-│        - Isolated from query workloads                           │
-│                                                                  │
-│  [J] Database (FIVETRAN_DB)                                      │
-│      • Type: Snowflake database object                           │
-│      • Purpose: Logical container for schemas                    │
-│      • Storage: Unlimited (pay per TB stored)                    │
-│                                                                  │
-│  [K] Landing Schema (FINANCE_RAW)                                │
-│      • Tables: Mirror of source tables                           │
-│      • Metadata Columns:                                         │
-│        - _FIVETRAN_SYNCED: Load timestamp                        │
-│        - _FIVETRAN_DELETED: Soft delete flag                     │
-│      • Purpose: Immutable raw data store                         │
-│                                                                  │
-│  [L] Clean Views Schema (FINANCE_RAW_V)                          │
-│      • Type: Views on raw tables                                 │
-│      • Transformations:                                          │
-│        - Deduplication by business key                           │
-│        - Data type casting                                       │
-│        - NULL handling                                           │
-│      • Purpose: Consumption-ready data                           │
-│                                                                  │
-│  [M] Access Control Components                                   │
-│      • User: FIVETRAN_USER                                       │
-│      • Role: FIVETRAN_ROLE                                       │
-│      • Grants: Limited to FIVETRAN_DB only                       │
-│      • Purpose: Principle of least privilege                     │
-│                                                                  │
-└──────────────────────────────────────────────────────────────────┘
+```mermaid
+graph TD
+    subgraph Source["SOURCE COMPONENTS (SAP BTP)"]
+        A["[A] SAP HANA Cloud Database<br/>• In-memory columnar database<br/>• SAP BTP Cloud Infrastructure<br/>• HANA Cloud 2.x<br/>• Operational data store"]
+        B["[B] Finance Schema<br/>• Tables: BKPF, BSEG, SKA1<br/>• Custom reporting views<br/>• Business logic organization"]
+        C["[C] Database User<br/>• FIVETRAN_HANA_USER<br/>• SELECT only (read-only)<br/>• Password authentication<br/>• Secure data extraction"]
+    end
+    
+    subgraph Integration["INTEGRATION COMPONENTS (Fivetran)"]
+        D["[D] SAP HANA Connector<br/>• Pre-built connector<br/>• JDBC over SSL<br/>• Batch pull mode<br/>• Auto schema detection"]
+        E["[E] Batch Scheduler<br/>• Daily frequency<br/>• Time-based triggers<br/>• Sync orchestration"]
+        F["[F] Schema Mapper<br/>• Data type conversion<br/>• HANA → Snowflake mapping<br/>• Type standardization"]
+        G["[G] Metadata Store<br/>• Sync history tracking<br/>• Schema versions<br/>• Incremental sync state"]
+        H["[H] Monitoring & Alerting<br/>• Sync metrics<br/>• Error notifications<br/>• Web dashboard"]
+    end
+    
+    subgraph Target["TARGET COMPONENTS (Snowflake)"]
+        I["[I] Virtual Warehouse<br/>• FIVETRAN_WH_DEDICATED<br/>• SMALL size (4 servers)<br/>• Always-on (no suspend)<br/>• Dedicated compute"]
+        J["[J] Database<br/>• FIVETRAN_DB<br/>• Logical container<br/>• Unlimited storage"]
+        K["[K] Landing Schema<br/>• FINANCE_RAW<br/>• Raw data tables<br/>• Metadata columns"]
+        L["[L] Clean Views Schema<br/>• FINANCE_RAW_V<br/>• Deduplication logic<br/>• Type casting"]
+        M["[M] Access Control<br/>• FIVETRAN_USER<br/>• FIVETRAN_ROLE<br/>• Limited privileges"]
+    end
+    
+    A --> B
+    B --> C
+    C --> D
+    D --> E
+    E --> F
+    F --> G
+    G --> H
+    H --> I
+    I --> J
+    J --> K
+    K --> L
+    L --> M
+    
+    style Source fill:#e3f2fd,stroke:#1976d2
+    style Integration fill:#f3e5f5,stroke:#7b1fa2
+    style Target fill:#e0f2f1,stroke:#00796b
 ```
 
 ---
