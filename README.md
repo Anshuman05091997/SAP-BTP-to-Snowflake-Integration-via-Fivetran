@@ -9,6 +9,7 @@ This project demonstrates a data integration pipeline that extracts financial da
 **Source System:** SAP BTP (HANA Cloud)  
 **Target System:** Snowflake Data Warehouse  
 **Integration Tool:** Fivetran Connector  
+**Implementation Period:** February 2025 - October 2025 (9 months)
 
 ---
 
@@ -337,22 +338,13 @@ Configure the connector with SAP BTP connection details from Phase 1.3:
 **Validation Queries:**
 
 **a) List Loaded Tables**
-```sql
-SHOW TABLES IN SCHEMA FIVETRAN_DB.FINANCE_RAW;
-```
+Execute SHOW TABLES command in FINANCE_RAW schema to verify all tables are present
 
 **b) Sample Data Inspection**
-```sql
-SELECT * FROM FIVETRAN_DB.FINANCE_RAW.BKPF LIMIT 50;
-```
+Run SELECT query to retrieve sample records from BKPF table (limit to 50 rows)
 
 **c) Row Count Validation**
-```sql
-SELECT TABLE_NAME, ROW_COUNT
-FROM FIVETRAN_DB.INFORMATION_SCHEMA.TABLES
-WHERE TABLE_SCHEMA = 'FINANCE_RAW'
-ORDER BY ROW_COUNT DESC;
-```
+Execute query to get row counts for all tables in FINANCE_RAW schema, ordered by size
 
 **Expected Results:**
 - All selected tables appear in `FINANCE_RAW` schema
@@ -364,10 +356,7 @@ ORDER BY ROW_COUNT DESC;
 Validate that the most recent data has been loaded:
 
 **Sample Freshness Check:**
-```sql
-SELECT MAX(POSTING_DATE) AS latest_posting_date
-FROM FIVETRAN_DB.FINANCE_RAW.BKPF;
-```
+Execute MAX function query on POSTING_DATE column to verify most recent data timestamp
 
 **Validation Criteria:**
 - Maximum date should reflect recent business transactions
@@ -392,14 +381,10 @@ FROM FIVETRAN_DB.FINANCE_RAW.BKPF;
 **Performance Tuning:**
 
 **Scale Up (for faster loading):**
-```sql
-ALTER WAREHOUSE FIVETRAN_WH_DEDICATED SET WAREHOUSE_SIZE = 'MEDIUM';
-```
+Execute ALTER WAREHOUSE command to increase size to MEDIUM for improved performance
 
 **Scale Down (to reduce costs):**
-```sql
-ALTER WAREHOUSE FIVETRAN_WH_DEDICATED SET WAREHOUSE_SIZE = 'SMALL';
-```
+Execute ALTER WAREHOUSE command to reduce size to SMALL for cost optimization
 
 **Sizing Recommendations:**
 - **XSMALL/SMALL**: Suitable for POC and small data volumes (<1M rows)
@@ -409,12 +394,7 @@ ALTER WAREHOUSE FIVETRAN_WH_DEDICATED SET WAREHOUSE_SIZE = 'SMALL';
 #### 6.2 Cost Monitoring
 
 **Warehouse Usage Query:**
-```sql
-SELECT *
-FROM SNOWFLAKE.ACCOUNT_USAGE.WAREHOUSE_METERING_HISTORY
-WHERE WAREHOUSE_NAME = 'FIVETRAN_WH_DEDICATED'
-ORDER BY START_TIME DESC;
-```
+Execute query against ACCOUNT_USAGE schema to retrieve warehouse metering history and cost tracking
 
 **Monitoring Metrics:**
 - Credits consumed per hour
@@ -435,26 +415,12 @@ ORDER BY START_TIME DESC;
 **Purpose:** Provide deduplicated, type-safe views for downstream BI tools while preserving raw data integrity.
 
 **Schema Creation:**
-```sql
-CREATE OR REPLACE SCHEMA FIVETRAN_DB.FINANCE_RAW_V;
-```
+Execute CREATE SCHEMA command to establish FINANCE_RAW_V for clean views
 
 #### 7.2 Deduplication Pattern
 
 **Example: Document Header Deduplication**
-```sql
-CREATE OR REPLACE VIEW FIVETRAN_DB.FINANCE_RAW_V.BKPF_CLEAN AS
-SELECT *
-FROM (
-  SELECT t.*,
-         ROW_NUMBER() OVER (
-           PARTITION BY DOCUMENT_NUMBER
-           ORDER BY _FIVETRAN_SYNCED DESC NULLS LAST
-         ) AS rn
-  FROM FIVETRAN_DB.FINANCE_RAW.BKPF t
-)
-WHERE rn = 1;
-```
+Execute CREATE VIEW command with ROW_NUMBER window function to deduplicate records by business key, selecting only the most recently synced version
 
 **Deduplication Logic:**
 - Partitions by business key (e.g., DOCUMENT_NUMBER)

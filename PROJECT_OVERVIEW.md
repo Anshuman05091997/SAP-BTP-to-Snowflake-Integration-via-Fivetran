@@ -3,7 +3,7 @@
 
 **Project Name:** Finance Data Integration via Fivetran  
 **Project Type:** Batch-based ETL Data Pipeline  
-**Implementation Period:** January 2025 - February 2025  
+**Implementation Period:** February 2025 - October 2025 (9 months)  
 **Project Status:** Proof of Concept (POC) Complete  
 **Author:** Research Student Implementation (9 months experience via contractor)  
 **Date:** October 2025
@@ -27,7 +27,7 @@ This project implements a cloud-based data integration pipeline that automates t
 │  Sync Mode:          Batch Processing (Daily)                   │
 │  Data Scope:         Finance Tables (3-5 objects for POC)      │
 │  Data Freshness:     < 24 hours (daily sync)                    │
-│  Implementation:     4 weeks (POC phase)                        │
+│  Implementation:     9 months (research period)                 │
 │  Architecture:       Cloud-native, fully managed                │
 │                                                                 │
 └─────────────────────────────────────────────────────────────────┘
@@ -55,28 +55,37 @@ This project implements a modern cloud-based ELT (Extract, Load, Transform) arch
 ### Business Value
 
 ```mermaid
-mindmap
-  root((Data Integration<br/>Value))
-    Business Impact
-      Faster Reporting
-      Better Decisions
-      Cost Reduction
-      Compliance
-    Technical Benefits
-      Automation
-      Scalability
-      Reliability
-      Cloud-native
-    Operational Gains
-      No Manual Work
-      Self-service Data
-      Audit Trail
-      Data Freshness
-    Strategic Enablers
-      Modern Stack
-      Future-ready
-      Analytics Foundation
-      Digital Transformation
+graph TD
+    A[Data Integration Value] --> B[Business Impact]
+    A --> C[Technical Benefits]
+    A --> D[Operational Gains]
+    A --> E[Strategic Enablers]
+    
+    B --> B1[Faster Reporting]
+    B --> B2[Better Decisions]
+    B --> B3[Cost Reduction]
+    B --> B4[Compliance]
+    
+    C --> C1[Automation]
+    C --> C2[Scalability]
+    C --> C3[Reliability]
+    C --> C4[Cloud-native]
+    
+    D --> D1[No Manual Work]
+    D --> D2[Self-service Data]
+    D --> D3[Audit Trail]
+    D --> D4[Data Freshness]
+    
+    E --> E1[Modern Stack]
+    E --> E2[Future-ready]
+    E --> E3[Analytics Foundation]
+    E --> E4[Digital Transformation]
+    
+    style A fill:#4CAF50,stroke:#2E7D32,color:#fff
+    style B fill:#2196F3,stroke:#1565C0,color:#fff
+    style C fill:#FF9800,stroke:#E65100,color:#fff
+    style D fill:#9C27B0,stroke:#6A1B9A,color:#fff
+    style E fill:#F44336,stroke:#C62828,color:#fff
 ```
 
 ---
@@ -390,65 +399,70 @@ graph TB
 
 ```mermaid
 gantt
-    title Project Implementation Timeline (4 Weeks)
+    title Project Implementation Timeline (9 Months)
     dateFormat YYYY-MM-DD
-    section Week 1: Planning & Setup
-    Requirements Gathering         :done, w1a, 2025-01-01, 2d
-    Architecture Design            :done, w1b, after w1a, 2d
-    Access Provisioning            :done, w1c, after w1b, 3d
+    section Phase 1: Planning & Setup
+    Requirements Gathering         :done, p1a, 2025-02-01, 2w
+    Architecture Design            :done, p1b, after p1a, 2w
+    Access Provisioning            :done, p1c, after p1b, 2w
     
-    section Week 2: Configuration
-    SAP BTP Setup                  :done, w2a, 2025-01-08, 1d
-    Snowflake Setup                :done, w2b, after w2a, 1d
-    Fivetran Configuration         :done, w2c, after w2b, 2d
-    Network Security               :done, w2d, after w2c, 1d
+    section Phase 2: Configuration
+    SAP BTP Setup                  :done, p2a, 2025-03-01, 2w
+    Snowflake Setup                :done, p2b, after p2a, 2w
+    Fivetran Configuration         :done, p2c, after p2b, 2w
+    Network Security               :done, p2d, after p2c, 2w
     
-    section Week 3: Implementation
-    Create Connectors              :done, w3a, 2025-01-15, 1d
-    Initial Data Sync              :done, w3b, after w3a, 2d
-    Data Validation                :done, w3c, after w3b, 2d
-    Performance Testing            :done, w3d, after w3c, 2d
+    section Phase 3: Implementation
+    Create Connectors              :done, p3a, 2025-04-01, 2w
+    Initial Data Sync              :done, p3b, after p3a, 2w
+    Data Validation                :done, p3c, after p3b, 2w
+    Performance Testing            :done, p3d, after p3c, 2w
     
-    section Week 4: Production
-    Documentation                  :active, w4a, 2025-01-22, 3d
-    User Training                  :active, w4b, after w4a, 2d
-    Production Cutover             :crit, w4c, after w4b, 1d
-    Post-Launch Monitoring         :w4d, after w4c, 1d
+    section Phase 4: Production
+    Documentation                  :active, p4a, 2025-05-01, 4w
+    User Training                  :active, p4b, after p4a, 2w
+    Production Cutover             :crit, p4c, after p4b, 2w
+    Post-Launch Monitoring         :p4d, after p4c, 12w
 ```
 
 ### Milestone Summary
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
-│  KEY MILESTONES                                                  │
+│  KEY MILESTONES (9-Month Research Period)                       │
 └──────────────────────────────────────────────────────────────────┘
 
-Week 1: Foundation
-  ✓ Requirements documented
-  ✓ Architecture approved
-  ✓ All system access obtained
-  Deliverable: Architecture document
+Phase 1 (Feb-Mar): Foundation & Planning
+  ✓ Requirements documented and validated
+  ✓ Architecture approved by stakeholders
+  ✓ All system access obtained and tested
+  ✓ Research methodology established
+  Deliverable: Comprehensive architecture document
 
-Week 2: Infrastructure
+Phase 2 (Mar-Apr): Infrastructure Setup
   ✓ Source system configured (HANA user created)
   ✓ Target system configured (Snowflake warehouse ready)
   ✓ Integration platform configured (Fivetran connected)
   ✓ Network security implemented (IP allowlist)
-  Deliverable: Infrastructure ready for sync
+  ✓ Initial testing and validation completed
+  Deliverable: Fully operational infrastructure
 
-Week 3: Implementation
-  ✓ Connectors created and tested
+Phase 3 (Apr-May): Implementation & Validation
+  ✓ Connectors created and thoroughly tested
   ✓ Initial sync completed (all tables loaded)
   ✓ Data validation passed (row counts match)
   ✓ Performance benchmarks established
-  Deliverable: Working POC with validated data
+  ✓ Multiple test cycles executed
+  Deliverable: Validated POC with performance metrics
 
-Week 4: Production Launch
-  ✓ Documentation completed
-  ✓ Operations team trained
-  ✓ Daily sync schedule active
-  ✓ Monitoring in place
-  Deliverable: Production-ready system
+Phase 4 (May-Oct): Production & Research
+  ✓ Documentation completed and reviewed
+  ✓ Operations procedures established
+  ✓ Daily sync schedule active and monitored
+  ✓ Continuous monitoring and optimization
+  ✓ Research findings documented
+  ✓ Knowledge transfer completed
+  Deliverable: Production-ready system with research insights
 ```
 
 ---

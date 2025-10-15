@@ -24,33 +24,33 @@
 
 ```mermaid
 gantt
-    title SAP BTP to Snowflake Integration - Project Timeline
+    title SAP BTP to Snowflake Integration - Research Timeline (9 Months)
     dateFormat YYYY-MM-DD
-    section Planning
-    Requirements Gathering           :done, req, 2025-01-01, 3d
-    Architecture Design              :done, arch, after req, 2d
-    Security Review                  :done, sec, after arch, 2d
+    section Planning Phase
+    Requirements Gathering           :done, req, 2025-02-01, 2w
+    Architecture Design              :done, arch, after req, 2w
+    Security Review                  :done, sec, after arch, 2w
     
-    section Setup (Week 1)
-    SAP BTP Configuration           :done, sap, 2025-01-08, 1d
-    Snowflake Setup                 :done, snow, after sap, 1d
-    Fivetran Account Setup          :done, ftv, after snow, 1d
-    Network Configuration           :done, net, after ftv, 2d
+    section Setup Phase
+    SAP BTP Configuration           :done, sap, 2025-03-01, 2w
+    Snowflake Setup                 :done, snow, after sap, 2w
+    Fivetran Account Setup          :done, ftv, after snow, 2w
+    Network Configuration           :done, net, after ftv, 2w
     
-    section Implementation (Week 2)
-    Create Connectors               :done, conn, 2025-01-13, 1d
-    Table Selection                 :done, tbl, after conn, 1d
-    Initial Sync                    :done, init, after tbl, 2d
+    section Implementation Phase
+    Create Connectors               :done, conn, 2025-04-01, 2w
+    Table Selection                 :done, tbl, after conn, 2w
+    Initial Sync                    :done, init, after tbl, 2w
     
-    section Validation (Week 3)
-    Data Validation                 :active, val, 2025-01-17, 2d
-    Performance Testing             :active, perf, after val, 2d
-    Documentation                   :active, doc, after perf, 2d
+    section Validation Phase
+    Data Validation                 :active, val, 2025-05-01, 2w
+    Performance Testing             :active, perf, after val, 2w
+    Documentation                   :active, doc, after perf, 4w
     
-    section Production (Week 4)
-    Go-Live Preparation             :crit, prep, 2025-01-24, 2d
-    Production Cutover              :crit, prod, after prep, 1d
-    Monitoring Setup                :monitor, after prod, 2d
+    section Production Phase
+    Go-Live Preparation             :crit, prep, 2025-06-01, 2w
+    Production Cutover              :crit, prod, after prep, 2w
+    Monitoring & Research           :monitor, after prod, 12w
 ```
 
 ### High-Level Flow Diagram (ASCII)
@@ -233,7 +233,7 @@ PHASE 4: VALIDATION
            ▼
 ┌──────────────────────────────┐
 │ Sample Data Quality          │
-│ SELECT * LIMIT 50            │
+│ Execute sample data query    │
 └──────────┬───────────────────┘
            │
            ▼
@@ -406,7 +406,7 @@ sequenceDiagram
         CONN->>HANA: Query Schema Metadata
         HANA-->>CONN: Column Definitions
         
-        CONN->>HANA: SELECT * WHERE modified > last_sync
+        CONN->>HANA: Execute incremental query with timestamp filter
         Note over HANA: Execute Query<br/>Return Result Set
         HANA-->>CONN: Incremental Data (Batches)
         
@@ -512,7 +512,7 @@ CONSUMPTION: FINANCE_RAW_V.BKPF_CLEAN
 ┌─────────────────────────────────────┐
 │ VIEW LOGIC:                         │
 │                                     │
-│ SELECT *                            │
+│ Execute data extraction query       │
 │ FROM (                              │
 │   SELECT t.*,                       │
 │     ROW_NUMBER() OVER (             │
@@ -613,7 +613,7 @@ stateDiagram-v2
         ┌──────────────────────────────────────┐
         │      FULL LOAD (Historical Sync)     │
         ├──────────────────────────────────────┤
-        │ Query: SELECT * FROM table           │
+        │ Query: Execute full table scan       │
         │ Mode: Snapshot                       │
         │ Strategy: Load all rows              │
         │ Duration: Longer (30-60 min)         │
@@ -632,8 +632,8 @@ stateDiagram-v2
         ┌──────────────────────────────────────┐
         │    INCREMENTAL SYNC (Delta Load)     │
         ├──────────────────────────────────────┤
-        │ Query: SELECT * FROM table           │
-        │        WHERE modified > :last_sync   │
+        │ Query: Execute full table scan       │
+        │        WHERE modified > last_sync    │
         │ Mode: Incremental                    │
         │ Strategy: Load changed rows only     │
         │ Duration: Faster (5-15 min)          │
